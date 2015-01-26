@@ -9,18 +9,79 @@
     <div id='content'>
         <canvas id='primary_canvas' width='600' height='400'></canvas>
         <script>
+        var MicroprocMips = MicroprocMips || {};
+
+        MicroprocMips.OpCode = {
+            ARITHMETIC: 0x00,
+            BRANCH: 0x01,
+            JUMP: 0x02,
+            JUMP_LINK: 0x03,
+            BRANCH_EQ: 0x04,
+            BRANCH_NOT_EQ: 0x05,
+            BRANCH_LT_EQ_ZERO: 0x06,
+            BRANCH_GT_ZERO: 0x07,
+            ADD_IMM_S: 0x08,
+            ADD_IMM_U: 0x09,
+            SET_LT_IMM_S: 0x0A,
+            SET_LT_IMM_U: 0x0B,
+            AND_IMM: 0x0C,
+            OR_IMM: 0x0D,
+            XOR_IMM: 0x0E,
+            LOAD_UPPER_IMM: 0x0F,
+            LOAD_BYTE: 0x20,
+            LOAD_WORD: 0x23,
+            STORE_BYTE: 0x28,
+            STORE_WORD: 0x2B
+        };
+
+        MicroprocMips.Branch = {
+            BRANCH_LT_ZERO: 0x00,
+            BRANCH_GT_EQ_ZERO: 0x01,
+            BRANCH_LT_ZERO_LINK: 0x10,
+            BRANCH_GT_EQ_ZERO_LINK: 0x11
+        };
+
+        MicroprocMips.Funct = {
+            SHIFT_LEFT_LOGIC: 0x00,
+            SHIFT_RIGHT_LOGIC: 0X02,
+            SHIFT_RIGHT_ARITH: 0x03,
+            SHIFT_LEFT_LOGIC_VAR: 0x04,
+            SHIFT_RIGHT_LOGIC_VAR: 0x05,
+            JUMP_REGISTER: 0x08,
+            SYSTEM_CALL: 0x0C,
+            MOVE_FROM_HIGH: 0x10,
+            MOVE_FROM_LOW: 0x12,
+            MULTIPLY_S: 0x18,
+            MULTIPLY_U: 0x19,
+            DIVIDE_S: 0x1A,
+            DIVIDE_U: 0x1B,
+            ADD_S: 0x20,
+            ADD_U: 0x21,
+            SUBTRACT_S: 0x22,
+            SUBTRACT_U: 0x23,
+            AND: 0x24,
+            OR: 0x25,
+            XOR: 0x26,
+            SET_LT_S: 0x2A,
+            SET_LT_U: 0x2B
+        };
+
         /**
          * @constructor
          */
-        function Computer() {
-            this.memorySize = 10;
-            this.wordSize = 8;
+        MicroprocMips.Computer = function() {
+            this.memorySize = 32;
+            this.wordSize = 32;
 
             this.memory = [];
 
             // program counter
-            // pointer to next instruction to fetch
+            // pointer to current instruction to fetch
             this.pc = 0;
+
+            // next program counter
+            // pointer to the next instruction to fetch
+            this.npc = 1;
 
             // instruction register
             // holds the current instruction after fetch
@@ -32,7 +93,7 @@
             this.fault = 0;
         }
 
-        Computer.prototype = {
+        MicroprocMips.Computer.prototype = {
             initializeMemory: function(){
                 var i;
                 for(i = 0; i < this.memorySize; i++){
@@ -42,6 +103,12 @@
 
             setProgramCounter: function(address){
                 this.pc = address;
+                this.npc = this.pc + 1;
+            },
+
+            advanceProgramCounter: function(offset){
+                this.pc = this.npc;
+                this.npc += offset;
             },
 
             fetch: function(){
@@ -52,73 +119,127 @@
 
                 // simple, instruction is one word size
                 this.ir = this.memory[this.pc];
-                this.pc++;
             },
 
             decode: function(){
                 // op code equals the 6 most significant bits
                 var op = this.ir >>> 24;
 
-                if(op === 0x00){
+                if(op === MicroprocMips.OpCode.ARITHMETIC){
                     // arithmetic functions
 
                     // funct code equals the 6 least significant bits
                     var funct = this.ir & 0x3F;
 
-                    if(funct === 0x00){
-                            // SLL - shift left logical
-                    } else if(funct === 0x02){
-                            // SRL - shift right logical
-                    } else if(funct === 0x03){
-                            // SRA - shift right arithmetic
-                    } else if(funct === 0x04){
-                            // SLLV - shift left logical variable
-                    } else if(funct === 0x06){
-                            // SRLV - shift right logical variable
-                    } else if(funct === 0x08){
-                            // JR - jump register
-                    } else if(funct === 0x0C){
-                            // SYSCALL - system call
-                    } else if(funct === 0x10){
-                            // MFHI - move from HI register
-                    } else if(funct === 0x12){
-                            // MFLO move from LO register
-                    } else if(funct === 0x18){
-                            // MULT - multiply
-                    } else if(funct === 0x19){
-                            // MULTU - multiply unsigned
-                    } else if(funct === 0x20){
-                            // ADD - add with overflow
-                    } else if (funct === 0x21){
-                            // ADDU - add unsigned, no overflow
-                    } else if (funct === 0x22){
-                            // SUB - subtract
-                    } else if (funct === 0x23){
-                            // SUBU - subtract, unsigned
-                    } else if (funct === 0x24){
-                            // AND - bitwise and
-                    } else if (funct === 0x25){
-                            // OR - bitwise or
-                    } else if (funct === 0x26){
-                            // XOR - bitwise exclusive or
-                    } else if (funct === 0x2A){
-                            // SLT - set on less than, signed
-                    } else if (funct === 0x2B){
-                            // SLTU - set on less than, unsigned
-                    } else if (funct === 0x1A){
-                            // DIV - divide
-                    } else if (funct === 0x1B){
-                            // DIVU - divide unsigned
+                    if(funct === MicroprocMips.Funct.SHIFT_LEFT_LOGIC){
+                        // SLL - shift left logical
+                    } else if(funct === MicroprocMips.Funct.SHIFT_RIGHT_LOGIC){
+                        // SRL - shift right logical
+                    } else if(funct === MicroprocMips.Funct.SHIFT_RIGHT_ARITH){
+                        // SRA - shift right arithmetic
+                    } else if(funct === MicroprocMips.Funct.SHIFT_LEFT_LOGIC_VAR){
+                        // SLLV - shift left logical variable
+                    } else if(funct === MicroprocMips.Funct.SHIFT_RIGHT_LOGIC_VAR){
+                        // SRLV - shift right logical variable
+                    } else if(funct === MicroprocMips.Funct.JUMP_REGISTER){
+                        // JR - jump register
+                    } else if(funct === MicroprocMips.Funct.SYSTEM_CALL){
+                        // SYSCALL - system call
+                    } else if(funct === MicroprocMips.Funct.MOVE_FROM_HIGH){
+                        // MFHI - move from HI register
+                    } else if(funct === MicroprocMips.Funct.MOVE_FROM_LOW){
+                        // MFLO - move from LO register
+                    } else if(funct === MicroprocMips.Funct.MULTIPLY_S){
+                        // MULT - multiply, signed
+                    } else if(funct === MicroprocMips.Funct.MULTIPLY_U){
+                        // MULTU - multiply, unsigned
+                    } else if (funct === MicroprocMips.Funct.DIVIDE_S){
+                        // DIV - divide, signed
+                    } else if (funct === MicroprocMips.Funct.DIVIDE_U){
+                        // DIVU - divide, unsigned
+                    } else if(funct === MicroprocMips.Funct.ADD_S){
+                        // ADD - add, signed
+                    } else if (funct === MicroprocMips.Funct.ADD_U){
+                        // ADDU - add unsigned
+                    } else if (funct === MicroprocMips.Funct.SUBTRACT_S){
+                        // SUB - subtract, signed
+                    } else if (funct === MicroprocMips.Funct.SUBTRACT_U){
+                        // SUBU - subtract, unsigned
+                    } else if (funct === MicroprocMips.Funct.AND){
+                        // AND - bitwise and
+                    } else if (funct === MicroprocMips.Funct.OR){
+                        // OR - bitwise or
+                    } else if (funct === MicroprocMips.Funct.XOR){
+                        // XOR - bitwise exclusive or
+                    } else if (funct === MicroprocMips.Funct.SET_LT_S){
+                        // SLT - set on less than, signed
+                    } else if (funct === MicroprocMips.Funct.SET_LT_U){
+                        // SLTU - set on less than, unsigned
+                    } 
+                } else if (MicroprocMips.OpCode.BRANCH){
+                    // key branching functions
+
+                    // branch code equals 5 most significant bits, after
+                    // the first 11 most significant bits
+                    var branch = this.ir & 0x1F0000;
+
+                    if (branch == MicroprocMips.Branch.BRANCH_LT_ZERO){
+                        // BLTZ - branch on less than zero
+                    } else if(branch == MicroprocMips.Branch.BRANCH_GT_EQ_ZERO){
+                        // BGEZ - branch on greater than or equal to zero
+                    } else if (branch == MicroprocMips.Branch.BRANCH_LT_ZERO_LINK){
+                        // BLTZAL - branch on less than zero and link
+                    } else if (branch == MicroprocMips.Branch.BRANCH_GT_EQ_ZERO_LINK){
+                        // BGEZAL - branch on greater than or equal to zero
+                        //          and link
                     }
+                } else if (op == MicroprocMips.OpCode.JUMP){
+                    // J - jump
+                } else if (op == MicroprocMips.OpCode.JUMP_LINK){
+                    // JAL - jump and link
+                } else if (op == MicroprocMips.OpCode.BRANCH_EQ){
+                    // BEQ - branch on equal
+                } else if (op == MicroprocMips.OpCode.BRANCH_NOT_EQ){
+                    // BNE - branch on not equal
+                } else if (op == MicroprocMips.OpCode.BRANCH_LT_EQ_ZERO){
+                    // BLEZ - branch on less than or equal to zero
+                } else if (op == MicroprocMips.OpCode.BRANCH_GT_ZERO){
+                    // BGTZ - branch on greater than zero
+                } else if (op == MicroprocMips.OpCode.ADD_IMM_S){
+                    // ADDI - add immediate, signed
+                } else if (op == MicroprocMips.OpCode.ADD_IMM_U){
+                    // ADDIU - add immediate, unsigned
+                } else if (op == MicroprocMips.OpCode.SET_LT_IMM_S){
+                    // SLTI - set on less than immediate, signed
+                } else if (op == MicroprocMips.OpCode.SET_LT_IMM_U){
+                    // SLTIU - set on less than immediate, unsigned
+                } else if (op == MicroprocMips.OpCode.AND_IMM){
+                    // ANDI - bitwise and immediate
+                } else if (op == MicroprocMips.OpCode.OR_IMM){
+                    // ORI - bitwise or immediate
+                } else if (op == MicroprocMips.OpCode.XOR_IMM){
+                    // XORI - bitwise exclusive or immediate
+                } else if (op == MicroprocMips.OpCode.LOAD_UPPER_IMM){
+                    // LUI - load upper immediate
+                } else if (op == MicroprocMips.OpCode.LOAD_BYTE){
+                    // LB - load byte
+                } else if (op == MicroprocMips.OpCode.LOAD_WORD){
+                    // LW - load word
+                } else if (op == MicroprocMips.OpCode.STORE_BYTE){
+                    // SB - store byte
+                } else if (op == MicroprocMips.OpCode.STORE_WORD){
+                    // SW - store word
                 }
             }
         }
 
         // main
 
-        var computer = new Computer();
+        var computer = new MicroprocMips.Computer();
         computer.initializeMemory();
         computer.setProgramCounter(0);
+        computer.fetch();
+        computer.decode();
 
         draw();
 
