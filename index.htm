@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>Computer</title>
+</head>
+
+<body>
+    <div id='content'>
+        <canvas id='primary_canvas' width='600' height='400'></canvas>
+        <script>
+        /**
+         * @constructor
+         */
+        function Computer() {
+            this.memorySize = 10;
+            this.wordSize = 8;
+
+            this.memory = [];
+
+            // program counter
+            // pointer to next instruction to fetch
+            this.pc = 0;
+
+            // instruction register
+            // holds the current instruction after fetch
+            this.ir = 0;
+
+            // fault state
+            // 0 - no fault
+            // 1 - referenced memory out-of-range
+            this.fault = 0;
+        }
+
+        Computer.prototype = {
+            initializeMemory: function(){
+                var i;
+                for(i = 0; i < this.memorySize; i++){
+                    this.memory[i] = 0;
+                }
+            },
+
+            setProgramCounter: function(address){
+                this.pc = address;
+            },
+
+            fetch: function(){
+                if(this.pc < 0 || this.pc >= this.memorySize){
+                    this.fault = 1;
+                    return;
+                }
+
+                // simple, instruction is one word size
+                this.ir = this.memory[this.pc];
+                this.pc++;
+            },
+
+            decode: function(){
+                // op code equals the 6 most significant bits
+                var op = this.ir >>> 24;
+
+                if(op === 0x00){
+                    // arithmetic functions
+
+                    // funct code equals the 6 least significant bits
+                    var funct = this.ir & 0x3F;
+
+                    if(funct === 0x00){
+                            // SLL - shift left logical
+                    } else if(funct === 0x02){
+                            // SRL - shift right logical
+                    } else if(funct === 0x03){
+                            // SRA - shift right arithmetic
+                    } else if(funct === 0x04){
+                            // SLLV - shift left logical variable
+                    } else if(funct === 0x06){
+                            // SRLV - shift right logical variable
+                    } else if(funct === 0x08){
+                            // JR - jump register
+                    } else if(funct === 0x0C){
+                            // SYSCALL - system call
+                    } else if(funct === 0x10){
+                            // MFHI - move from HI register
+                    } else if(funct === 0x12){
+                            // MFLO move from LO register
+                    } else if(funct === 0x18){
+                            // MULT - multiply
+                    } else if(funct === 0x19){
+                            // MULTU - multiply unsigned
+                    } else if(funct === 0x20){
+                            // ADD - add with overflow
+                    } else if (funct === 0x21){
+                            // ADDU - add unsigned, no overflow
+                    } else if (funct === 0x22){
+                            // SUB - subtract
+                    } else if (funct === 0x23){
+                            // SUBU - subtract, unsigned
+                    } else if (funct === 0x24){
+                            // AND - bitwise and
+                    } else if (funct === 0x25){
+                            // OR - bitwise or
+                    } else if (funct === 0x26){
+                            // XOR - bitwise exclusive or
+                    } else if (funct === 0x2A){
+                            // SLT - set on less than, signed
+                    } else if (funct === 0x2B){
+                            // SLTU - set on less than, unsigned
+                    } else if (funct === 0x1A){
+                            // DIV - divide
+                    } else if (funct === 0x1B){
+                            // DIVU - divide unsigned
+                    }
+                }
+            }
+        }
+
+        // main
+
+        var computer = new Computer();
+        computer.initializeMemory();
+        computer.setProgramCounter(0);
+
+        draw();
+
+        // drawing function
+        function draw(){
+            var canvas = document.getElementById('primary_canvas');
+            var context = canvas.getContext('2d');
+
+            context.font = '40pt Arial';
+            context.fillStyle = '#f5f5f5';
+            context.fillText('10111', 150, 100);
+        }
+        </script>
+    </div>
+</body>
+</html>
